@@ -3,41 +3,47 @@ import resultTmp from './templates/result.hbs';
 import shortResultTmp from './templates/shortResult.hbs';
 import debounce from 'lodash.debounce';
 import alert from './js/pnotify';
+import fetchCountries from './js/fetchCountries';
 
 const inputRef = document.getElementById('countryInput');
 const resultRef = document.getElementById('result');
 
 let name;
-resultRef.innerHTML = '';
-
-const debouncedEvent = event => {
-  name = event.target.value;
-  const url = `https://restcountries.eu/rest/v2/name/${name}?fields=name;capital;population;languages;flag`;
-
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      if (data.length > 10) {
+inputRef.addEventListener(
+  'input',
+  debounce(event => {
+    name = event.target.value;
+    fetchCountries(name).then(data => {
+      if (data.message === 'Not Found') {
         resultRef.innerHTML = '';
+        alert({
+          text: 'Country is not found',
+        });
+        return;
+      }
+
+      if (data.length > 10) {
         alert({
           text: 'Too many matches found. Please specify your request',
         });
         return;
       }
+
       if (data.length <= 10 && data.length > 1) {
-        console.log(data.length);
-        const markUp = shortResultTmp(data);
-        resultRef.innerHTML = markUp;
+        updateShortCoutriesMarkup(data);
         return;
       } else {
-        const markUp = resultTmp(data);
-        resultRef.innerHTML = markUp;
+        updateLongCountriesMarkUp(data);
       }
-    })
-    .catch(error => {
-      resultRef.innerHTML = '';
-      console.log(error);
     });
-};
+  }, 500),
+);
 
-inputRef.addEventListener('input', debounce(debouncedEvent, 500));
+function updateShortCoutriesMarkup(dataMarkUp) {
+  const markUp = shortResultTmp(dataMarkUp);
+  resultRef.innerHTML = markUp;
+}
+function updateLongCountriesMarkUp(dataMarkUp) {
+  const markUp = resultTmp(dataMarkUp);
+  resultRef.innerHTML = markUp;
+}
